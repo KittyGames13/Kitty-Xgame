@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idle Mining Game with New Areas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            margin-bottom: 20px;
+        }
+
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .upgrade-button {
+            background-color: #f39c12;
+            margin-top: 10px;
+        }
+
+        .upgrade-button:disabled {
+            background-color: #ccc;
+        }
+
+        .status {
+            margin-top: 20px;
+        }
+
+        .status span {
+            font-weight: bold;
+        }
+
+        .copy-box {
+            margin-top: 20px;
+        }
+
+        #saveText {
+            width: 100%;
+            height: 80px;
+            font-size: 14px;
+        }
+
+        /* Animations for new areas */
+        .new-area {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 1s forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Idle Mining Game</h1>
+        <div class="stats">
+            <p>Gold: <span id="goldAmount">0</span></p>
+            <p>Gold per click: <span id="goldPerClick">1</span></p>
+            <p>Gold per second: <span id="goldPerSecond">0</span></p>
+        </div>
+
+        <button class="button" id="mineButton">Mine Gold</button>
+        <div class="status">
+            <button class="upgrade-button" id="upgradeButton">Upgrade Tool (Cost: <span id="upgradeCost">10</span> Gold)</button>
+            <button class="upgrade-button" id="autoMineButton">Unlock Auto Mining (Cost: <span id="autoMineCost">50</span> Gold)</button>
+            <button class="upgrade-button" id="increaseGoldPerSecond">Increase Gold/Second (Cost: <span id="goldPerSecondCost">25</span> Gold)</button>
+            <button class="upgrade-button" id="doubleGoldButton">Double Gold (Cost: <span id="doubleGoldCost">100</span> Gold)</button>
+        </div>
+
+        <!-- New Mining Sections Section -->
+        <div class="status">
+            <button class="upgrade-button new-area" id="miningSectionButton">Unlock Mining Area 1 (Cost: <span id="miningSectionCost">200</span> Gold)</button>
+            <button class="upgrade-button new-area" id="miningSection2Button" disabled>Unlock Mining Area 2 (Cost: <span id="miningSection2Cost">500</span> Gold)</button>
+            <button class="upgrade-button new-area" id="miningSection3Button" disabled>Unlock Mining Area 3 (Cost: <span id="miningSection3Cost">1000</span> Gold)</button>
+            <button class="upgrade-button new-area" id="miningSection4Button" disabled>Unlock Mining Area 4 (Cost: <span id="miningSection4Cost">2000</span> Gold)</button>
+            <button class="upgrade-button new-area" id="miningSection5Button" disabled>Unlock Mining Area 5 (Cost: <span id="miningSection5Cost">4000</span> Gold)</button>
+        </div>
+
+        <div class="copy-box">
+            <button class="button" id="saveButton">Save Game (Encoded)</button>
+            <textarea id="saveText" readonly></textarea>
+            <button class="button" id="loadButton">Load Game (Paste Encoded String)</button>
+            <input type="text" id="encodedInput" placeholder="Paste the encoded save string here">
+        </div>
+    </div>
+
+    <script>
+        // Initialize game variables
+        let gold = 0;
+        let goldPerClick = 1;
+        let goldPerSecond = 0;
+        let autoMineUnlocked = false;
+        let doubleGoldActive = false;
+        let doubleGoldTimeRemaining = 0;
+        let autoMineInterval = null;
+
+        // Upgrade costs
+        let upgradeCost = 10;
+        let autoMineCost = 50;
+        let goldPerSecondCost = 25;
+        let doubleGoldCost = 100;
+
+        // New mining section costs and income
+        let miningSectionCost = 200;
+        let miningSection2Cost = 500;
+        let miningSection3Cost = 1000;
+        let miningSection4Cost = 2000;
+        let miningSection5Cost = 4000;
+        
+        let miningSectionIncome = 5;
+        let miningSection2Income = 10;
+        let miningSection3Income = 15;
+        let miningSection4Income = 20;
+        let miningSection5Income = 30;
+
+        // DOM Elements
+        const goldAmountElement = document.getElementById('goldAmount');
+        const goldPerClickElement = document.getElementById('goldPerClick');
+        const goldPerSecondElement = document.getElementById('goldPerSecond');
+        const mineButton = document.getElementById('mineButton');
+        const upgradeButton = document.getElementById('upgradeButton');
+        const autoMineButton = document.getElementById('autoMineButton');
+        const increaseGoldPerSecondButton = document.getElementById('increaseGoldPerSecond');
+        const doubleGoldButton = document.getElementById('doubleGoldButton');
+        const miningSectionButton = document.getElementById('miningSectionButton');
+        const miningSection2Button = document.getElementById('miningSection2Button');
+        const miningSection3Button = document.getElementById('miningSection3Button');
+        const miningSection4Button = document.getElementById('miningSection4Button');
+        const miningSection5Button = document.getElementById('miningSection5Button');
+        const saveButton = document.getElementById('saveButton');
+        const loadButton = document.getElementById('loadButton');
+        const saveTextArea = document.getElementById('saveText');
+        const encodedInput = document.getElementById('encodedInput');
+
+        // Update stats on screen
+        function updateStats() {
+            goldAmountElement.textContent = gold;
+            goldPerClickElement.textContent = goldPerClick;
+            goldPerSecondElement.textContent = goldPerSecond;
+            document.getElementById('upgradeCost').textContent = upgradeCost;
+            document.getElementById('autoMineCost').textContent = autoMineCost;
+            document.getElementById('goldPerSecondCost').textContent = goldPerSecondCost;
+            document.getElementById('doubleGoldCost').textContent = doubleGoldCost;
+            document.getElementById('miningSectionCost').textContent = miningSectionCost;
+            document.getElementById('miningSection2Cost').textContent = miningSection2Cost;
+            document.getElementById('miningSection3Cost').textContent = miningSection3Cost;
+            document.getElementById('miningSection4Cost').textContent = miningSection4Cost;
+            document.getElementById('miningSection5Cost').textContent = miningSection5Cost;
+        }
+
+        // Mine gold on click
+        mineButton.addEventListener('click', () => {
+            let goldEarned = goldPerClick;
+            if (doubleGoldActive) {
+                goldEarned *= 2; // Double the gold if the boost is active
+            }
+            gold += goldEarned;
+            updateStats();
+        });
+
+        // Upgrade tool (increases gold per click)
+        upgradeButton.addEventListener('click', () => {
+            if (gold >= upgradeCost) {
+                gold -= upgradeCost;
+                goldPerClick += 1; // Increase gold per click
+                upgradeCost = Math.ceil(upgradeCost * 1.2); // Increase the cost by 20%
+                updateStats();
+            }
+        });
+
+        // Unlock auto-mining (performs automatic mining every second)
+        autoMineButton.addEventListener('click', () => {
+            if (gold >= autoMineCost && !autoMineUnlocked) {
+                gold -= autoMineCost;
+                autoMineUnlocked = true;
+                goldPerSecond = 1; // Start earning gold per second
+                autoMineCost = Math.ceil(autoMineCost * 1.5); // Increase the cost by 50% for next purchase
+                updateStats();
+
+                // Start the auto-mining process
+                autoMineInterval = setInterval(() => {
+                    gold += goldPerSecond;
+                    updateStats();
+                }, 1000);
+            }
+        });
+
+        // Increase gold per second upgrade
+        increaseGoldPerSecondButton.addEventListener('click', () => {
+            if (gold >= goldPerSecondCost) {
+                gold -= goldPerSecondCost;
+                goldPerSecond += 1; // Increase gold per second
+                goldPerSecondCost = Math.ceil(goldPerSecondCost * 1.5); // Increase the cost by 50%
+                updateStats();
+            }
+        });
+
+        // Double gold for a short time upgrade
+        doubleGoldButton.addEventListener('click', () => {
+            if (gold >= doubleGoldCost && !doubleGoldActive) {
+                gold -= doubleGoldCost;
+                doubleGoldActive = true;
+                doubleGoldTimeRemaining = 10; // Double gold for 10 seconds
+                updateStats();
+
+                // Countdown for the double gold boost
+                const interval = setInterval(() => {
+                    doubleGoldTimeRemaining--;
+                    updateStats();
+                    if (doubleGoldTimeRemaining <= 0) {
+                        clearInterval(interval);
+                        doubleGoldActive = false;
+                        updateStats();
+                    }
+                }, 1000);
+            }
+        });
+
+        // Unlock Mining Section 1
+        miningSectionButton.addEventListener('click', () => {
+            if (gold >= miningSectionCost) {
+                gold -= miningSectionCost;
+                goldPerSecond += miningSectionIncome;
+                miningSectionCost = Math.ceil(miningSectionCost * 1.5); // Increase the cost by 50% for the next section
+                miningSection2Button.disabled = false; // Enable Mining Section 2 button
+                miningSection2Button.classList.add('new-area'); // Add animation
+                updateStats();
+            }
+        });
+
+        // Unlock Mining Section 2
+        miningSection2Button.addEventListener('click', () => {
+            if (gold >= miningSection2Cost) {
+                gold -= miningSection2Cost;
+                goldPerSecond += miningSection2Income;
+                miningSection2Cost = Math.ceil(miningSection2Cost * 1.5); // Increase the cost by 50% for the next section
+                miningSection3Button.disabled = false; // Enable Mining Section 3 button
+                miningSection3Button.classList.add('new-area'); // Add animation
+                updateStats();
+            }
+        });
+
+        // Unlock Mining Section 3
+        miningSection3Button.addEventListener('click', () => {
+            if (gold >= miningSection3Cost) {
+                gold -= miningSection3Cost;
+                goldPerSecond += miningSection3Income;
+                miningSection3Cost = Math.ceil(miningSection3Cost * 1.5); // Increase the cost by 50% for the next section
+                miningSection4Button.disabled = false; // Enable Mining Section 4 button
+                miningSection4Button.classList.add('new-area'); // Add animation
+                updateStats();
+            }
+        });
+
+        // Unlock Mining Section 4
+        miningSection4Button.addEventListener('click', () => {
+            if (gold >= miningSection4Cost) {
+                gold -= miningSection4Cost;
+                goldPerSecond += miningSection4Income;
+                miningSection4Cost = Math.ceil(miningSection4Cost * 1.5); // Increase the cost by 50% for the next section
+                miningSection5Button.disabled = false; // Enable Mining Section 5 button
+                miningSection5Button.classList.add('new-area'); // Add animation
+                updateStats();
+            }
+        });
+
+        // Unlock Mining Section 5
+        miningSection5Button.addEventListener('click', () => {
+            if (gold >= miningSection5Cost) {
+                gold -= miningSection5Cost;
+                goldPerSecond += miningSection5Income;
+                updateStats();
+            }
+        });
+
+        // Encode and save game to Base64
+        saveButton.addEventListener('click', () => {
+            const gameData = {
+                gold,
+                goldPerClick,
+                goldPerSecond,
+                autoMineUnlocked,
+                doubleGoldActive,
+                doubleGoldTimeRemaining,
+                upgradeCost,
+                autoMineCost,
+                goldPerSecondCost,
+                doubleGoldCost,
+                miningSectionCost,
+                miningSection2Cost,
+                miningSection3Cost,
+                miningSection4Cost,
+                miningSection5Cost
+            };
+            const gameDataString = JSON.stringify(gameData);
+            const encodedData = btoa(gameDataString); // Encode the data to Base64
+            saveTextArea.value = encodedData; // Display the encoded string in the textarea
+        });
+
+        // Decode and load game from the Base64 string
+        loadButton.addEventListener('click', () => {
+            const encodedData = encodedInput.value;
+            if (encodedData) {
+                try {
+                    const gameDataString = atob(encodedData); // Decode the Base64 string
+                    const gameData = JSON.parse(gameDataString); // Parse the JSON data
+
+                    gold = gameData.gold;
+                    goldPerClick = gameData.goldPerClick;
+                    goldPerSecond = gameData.goldPerSecond;
+                    autoMineUnlocked = gameData.autoMineUnlocked;
+                    doubleGoldActive = gameData.doubleGoldActive;
+                    doubleGoldTimeRemaining = gameData.doubleGoldTimeRemaining;
+                    upgradeCost = gameData.upgradeCost;
+                    autoMineCost = gameData.autoMineCost;
+                    goldPerSecondCost = gameData.goldPerSecondCost;
+                    doubleGoldCost = gameData.doubleGoldCost;
+                    miningSectionCost = gameData.miningSectionCost;
+                    miningSection2Cost = gameData.miningSection2Cost;
+                    miningSection3Cost = gameData.miningSection3Cost;
+                    miningSection4Cost = gameData.miningSection4Cost;
+                    miningSection5Cost = gameData.miningSection5Cost;
+
+                    updateStats(); // Refresh the game stats after loading
+                } catch (error) {
+                    alert('Invalid save data!');
+                }
+            }
+        });
+
+        // Initialize game stats
+        updateStats();
+    </script>
+</body>
+</html>
